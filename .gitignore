@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.pyc
+
+# Virtual environment
+.venv/
+
+# Models and ML artifacts
+models/
+faiss_db/
+storage/
+
+# Data
+data/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Secrets
+.env
+
+# Logs
+*.log
