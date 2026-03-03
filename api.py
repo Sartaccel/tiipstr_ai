@@ -78,12 +78,139 @@
 #     }
 
 
+# from fastapi import FastAPI, UploadFile, File, HTTPException, Header, Depends
+# from fastapi.middleware.cors import CORSMiddleware
+# from pydantic import BaseModel
+# from dotenv import load_dotenv
+# import os
+
+# from rag_engine import answer_question
+
+# # -----------------------------
+# # Load Environment Variables
+# # -----------------------------
+# load_dotenv()
+# API_SECRET = os.getenv("AI_API_SECRET")
+
+# if not API_SECRET:
+#     raise RuntimeError("AI_API_SECRET is not set in environment variables")
+
+# # -----------------------------
+# # App initialization
+# # -----------------------------
+# app = FastAPI(
+#     title="Document-Aware RAG API",
+#     description="Backend API for document-based question answering",
+#     version="1.0.0"
+# )
+
+# # -----------------------------
+# # CORS (Restrict in production)
+# # -----------------------------
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=["http://localhost:8080"],  # Spring Boot origin
+#     allow_credentials=True,
+#     allow_methods=["POST", "GET"],
+#     allow_headers=["*"],
+# )
+
+# # -----------------------------
+# # Security - API Key Verification
+# # -----------------------------
+# def verify_api_key(x_api_key: str = Header(None)):
+#     if x_api_key != API_SECRET:
+#         raise HTTPException(status_code=403, detail="Unauthorized access")
+
+# # -----------------------------
+# # Constants
+# # -----------------------------
+# DATA_DIR = "data"
+# os.makedirs(DATA_DIR, exist_ok=True)
+
+# # -----------------------------
+# # Request / Response Models
+# # -----------------------------
+# class QuestionRequest(BaseModel):
+#     question: str
+
+# class AnswerResponse(BaseModel):
+#     answer: str
+
+# # -----------------------------
+# # Health Check
+# # -----------------------------
+# @app.get("/health")
+# def health_check():
+#     from rag_engine import get_llm, get_db
+#     get_llm()
+#     get_db()
+#     return {"status": "ok"}
+
+# # -----------------------------
+# # Ask Question Endpoint (Secured)
+# # -----------------------------
+# @app.post("/ask", response_model=AnswerResponse)
+# def ask_question(
+#     payload: QuestionRequest,
+#     _: str = Depends(verify_api_key)
+# ):
+#     if not payload.question.strip():
+#         raise HTTPException(status_code=400, detail="Question cannot be empty")
+
+#     answer = answer_question(payload.question)
+#     return {"answer": answer}
+
+# # -----------------------------
+# # Upload PDF Endpoint (Secured)
+# # -----------------------------
+# @app.post("/upload")
+# async def upload_pdf(
+#     file: UploadFile = File(...),
+#     _: str = Depends(verify_api_key)
+# ):
+#     if not file.filename.lower().endswith(".pdf"):
+#         raise HTTPException(status_code=400, detail="Only PDF files are allowed")
+
+#     file_path = os.path.join(DATA_DIR, file.filename)
+
+#     with open(file_path, "wb") as f:
+#         f.write(await file.read())
+
+#     return {
+#         "status": "uploaded",
+#         "filename": file.filename,
+#         "message": "File uploaded successfully. It will be indexed automatically."
+#     }
+
+
+# import rag_engine
+
+# @app.on_event("startup")
+# def load_model_on_startup():
+#     print("🔥 Loading model and FAISS at startup...")
+#     rag_engine.get_llm()
+#     rag_engine.get_db()
+#     print("✅ Model loaded successfully")
+    
+    
+    
+# import threading
+
+# @app.on_event("startup")
+# def async_load():
+#     threading.Thread(target=rag_engine.get_llm).start()
+#     threading.Thread(target=rag_engine.get_db).start()
+
+
+
 from fastapi import FastAPI, UploadFile, File, HTTPException, Header, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
 import os
 
+import rag_engine
 from rag_engine import answer_question
 
 # -----------------------------
@@ -179,3 +306,12 @@ async def upload_pdf(
         "filename": file.filename,
         "message": "File uploaded successfully. It will be indexed automatically."
     }
+
+# -----------------------------
+# Startup - Load FAISS Once
+# -----------------------------
+@app.on_event("startup")
+def load_model_on_startup():
+    print("🔥 Loading FAISS at startup...")
+    rag_engine.get_db()
+    print("✅ FAISS loaded successfully")
